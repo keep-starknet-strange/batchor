@@ -1,2 +1,41 @@
-# batchor
-Batch multiple transfers in a multicall, loading a data file.
+
+# Getting Started
+
+# Specs
+
+Multicall batch ERC20 transfer.
+We need to prepare a batch transfer made when upload the CSV file.
+
+The CSV file need to contains: 
+token_address,recipient,amount
+- Load file CSV 
+- Prepare the batch transfers for each row
+- View of batch transfer and TX ERC20 send
+- Modal before send the TX
+- Message view : You are about to send a multicall with XXX transactions, to a total of XXX unique recipients, using XXX unique tokens.
+- Send the TX Multicall
+
+## Run
+
+First, run the development server:
+
+```bash
+pnpm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+
+## Learn More
+
+To learn more about this stack, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - Learn how to build a Next.js application.
+
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out the [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
