@@ -112,31 +112,38 @@ const BatchTxModal = ({
   };
   // prepare each call data to transfer amount of token to the recipient
   const prepareTx = async () => {
-    console.log("csvData", csvData);
-
-    const prepareCsv = async () => {
+    try {
+      console.log("csvData", csvData);
+      if(csvData && csvData?.length == 0) {
+        toast({
+          title:"Csv data not upload correctly. Please verify your CSV",
+          status:"warning",
+          isClosable:true
+        })
+        return;
+      }
       csvData?.map(async (row, index) => {
         const tokenAddress = String(row["token_address"]);
         const lenTokenAddress = String(tokenAddress).length;
-
+  
         const recipient = String(row["recipient"]);
         const lenRecipientAddress = String(recipient).length;
         const amount = String(row["amount"]);
-
+  
         if (cairo.isTypeContractAddress(tokenAddress)) {
           toast({
             title: `Wrong token address in the row number ${index}`,
           });
           return;
         }
-
+  
         if (cairo.isTypeContractAddress(recipient)) {
           toast({
             title: `Wrong recipient in the row number ${index}`,
           });
           return;
         }
-
+  
         const contract = new Contract(TokenERC20Abi.abi, tokenAddress, account);
         let decimals = await contract.decimals();
         console.log("decimals", decimals);
@@ -147,22 +154,22 @@ const BatchTxModal = ({
           Number(amount)
         );
         console.log("call", call);
-
+  
         calls.push(call);
-
+  
         row["decimals"] = decimals;
-
+  
         return call;
       });
-
+  
       setCallData(calls);
-    };
-
-    await prepareCsv();
-
-    setIsBatchCanBeSend(true);
-
-    console.log("calls", calls);
+      setIsBatchCanBeSend(true);
+  
+      console.log("calls", calls);
+    }catch(e) {
+      console.log("Error prepare tx",e)
+    }
+ 
   };
 
   const sendTx = async () => {
@@ -170,6 +177,7 @@ const BatchTxModal = ({
 
     try {
       setIsLoadingTx(true);
+      setIsBatchCanBeSend(false);
       console.log("sendTx");
 
       if (csvData && csvData?.length == 0) {
@@ -301,7 +309,7 @@ const BatchTxModal = ({
               )}
 
               {txHash && (
-                <Box>
+                <Box py={{ base: "1em" }}>
                   <ExternalStylizedButtonLink
                     href={`${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`}
                   >
@@ -310,10 +318,18 @@ const BatchTxModal = ({
                 </Box>
               )}
 
-              <Button onClick={() => prepareTx()}>Prepare batch</Button>
-              <Button onClick={() => sendTx()} isDisabled={!isBatchCanBeSend}>
-                Batch tx
-              </Button>
+              <Box
+              display={"grid"}
+              gridTemplateColumns={{md:"repeat(2,1fr)"}}
+              gap={{base:"0.5em"}}
+              >
+                <Button onClick={() => prepareTx()}>Prepare batch</Button>
+                <Button onClick={() => sendTx()} isDisabled={!isBatchCanBeSend}
+                bg={{base:"brand.primary"}}
+                >
+                  Batch tx
+                </Button>
+              </Box>
             </Box>
           </ModalBody>
         </ModalContent>
