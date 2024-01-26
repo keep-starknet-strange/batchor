@@ -9,10 +9,13 @@ import HeaderSEO from "../components/HeaderSEO";
 import { CONFIG_WEBSITE } from "../constants";
 import AccountView from "../components/starknet/AccountView";
 import { ContainerCSV } from "../components/form/ContainerCSV";
+import { BatchType } from "../types";
+import { useState } from "react";
 
 const Home: NextPage = ({}) => {
   const color = useColorModeValue("gray.900", "gray.300");
 
+  const [batchType, setBatchType] = useState<BatchType>(BatchType.ERC20)
   return (
     <>
       <HeaderSEO></HeaderSEO>
@@ -54,7 +57,9 @@ const Home: NextPage = ({}) => {
                   Batch easily your transactions
                 </Text>
 
-                <ContainerCSV></ContainerCSV>
+                <ContainerCSV
+                batchType={batchType}
+                ></ContainerCSV>
               </Box>
 
               <Box

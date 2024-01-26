@@ -16,18 +16,25 @@ import {
 import * as xlsx from "xlsx";
 import { useAccount } from "@starknet-react/core";
 import BatchTxModal from "../modal/batch-tx";
+import { BatchType } from "../../types";
 interface IReadData {
   fileParent?: File;
   setFile: (file: File) => void;
+  batchType: BatchType;
 }
 
-const UploadCSV: React.FC<IReadData> = ({ fileParent, setFile }: IReadData) => {
+const UploadCSV: React.FC<IReadData> = ({
+  fileParent,
+  setFile,
+  batchType,
+}: IReadData) => {
   const [file, setFileChild] = useState<File | null | undefined>(fileParent);
-  const [totalTokens, setTotalTokens] = useState<number |undefined>()
-  const [canTryBatch, setCanTryBatch] = useState<boolean |undefined>(false)
-  const [totalTx, setTotalTx] = useState<number|undefined>()
-  const [totalRecipient, setTotalRecipient] = useState<number|undefined>()
-  const [verifData, setVerificationData]  = useState<string |undefined>()
+  const [totalTokens, setTotalTokens] = useState<number | undefined>();
+  const [canTryBatch, setCanTryBatch] = useState<boolean | undefined>(false);
+  const [totalTx, setTotalTx] = useState<number | undefined>();
+  const [totalRecipient, setTotalRecipient] = useState<number | undefined>();
+  const [verifData, setVerificationData] = useState<string | undefined>();
+  const [summaryData, setSummaryData] = useState<string | undefined>();
   const [csvData, setCsvData] = useState([]);
   const [error, setError] = useState(null);
   const toast = useToast();
@@ -53,65 +60,98 @@ const UploadCSV: React.FC<IReadData> = ({ fileParent, setFile }: IReadData) => {
     // Check if all expected columns are present
     return expectedColumns.every((col) => Object.keys(firstRow).includes(col));
   };
+
+  const generateSummaryData = (tokensAddressSet:Set<string>, datas:any[], verifDataText:string) => {
+    let sumAmountByToken: Map<string, number> = new Map();
+    if (batchType == BatchType?.ERC20) {
+      for (let contractAddress of Array.from(tokensAddressSet.values())) {
+        sumAmountByToken[contractAddress]=0;
+        sumAmountByToken.set(contractAddress, 0);
+        datas?.filter((callData) => {
+          if (callData?.token_address == contractAddress) {
+            let amount = Number(callData?.amount);
+            // console.log("Number(callData?.amount)", Number(callData?.amount));
+            const value = sumAmountByToken.get(contractAddress)
+            sumAmountByToken.set(contractAddress, amount+value)
+            return callData?.amount;
+          }
+        });
+      }
+    }
+    let summaryData = `Sum amount by tokens :\n`;
+    Array.from(sumAmountByToken.keys()).map((key)=> {
+      const value = sumAmountByToken.get(key)
+      const keyLen= key.length
+      const truncAddress =`${key.slice(0,10)}...${key.slice(keyLen-10,keyLen)} `
+      // verifDataText+=`${truncAddress} : ${value}\n`
+      summaryData+=`${truncAddress} : ${value}\n`
+    })
+
+    setSummaryData(summaryData)
+    setVerificationData(verifDataText)
+  }
   const readInfo = (datas?: any[]) => {
     try {
-      console.log("readInfo",datas)
+      console.log("readInfo", datas);
       const data = datas?.map((row, index) => {
         console.log("index", index);
         console.log("row", row);
         const tokenAddress = String(row["token_address"]);
         const lenTokenAddress = String(tokenAddress).length;
         console.log("tokenAddress", tokenAddress);
-  
+
         const recipient = String(row["recipient"]);
         console.log("recipient", recipient);
-  
+
         const lenRecipientAddress = String(recipient).length;
-  
+
         const amount = String(row["amount"]);
         console.log("amount", amount);
-  
+
         console.log("lenTokenAddress", lenTokenAddress);
-  
-  
+
         return {
-          amount:amount,
+          amount: amount,
           recipient,
-          token_address:tokenAddress
-        }
+          token_address: tokenAddress,
+        };
       });
-  
+
       console.log("read info data", data);
-      setTotalTx(data.length)
-  
+      setTotalTx(data.length);
+
       /** @TODO create text verification with stats */
       /** Find unique tokens */
-      let allTokens=data.map((c) => c.token_address)
-      console.log("allTokens", allTokens);
-  
-      const tokensAddressSet = new Set(allTokens) 
-      const tokensAddress = [new Set(allTokens) ]
-      console.log("tokensAddressSet",tokensAddressSet.size)
-      console.log("tokensAddress",tokensAddress)
-      console.log("tokensAddress.length", tokensAddress.length)
-  
-      setTotalTokens(tokensAddressSet.size)
-  
-      let allRecipients=data.map((c) => c.recipient)
-      /** Total amount by tokens */
-  
-      const totalRecipientSet = new Set(allRecipients) 
-      console.log("totalRecipientSet.length", totalRecipientSet.size)
-      setTotalRecipient(totalRecipientSet.size)
-  
-      const verifDataText = `You are about to send ${data.length} tx, with a total of ${totalRecipientSet.size} recipients, and using ${tokensAddressSet.size} tokens`
-  
-      setVerificationData(verifDataText)
-    }catch(e) {
-      console.log("Error read info",e)
-    }
-  
+      let allTokens = data.map((c) => c.token_address);
+      // console.log("allTokens", allTokens);
 
+      const tokensAddressSet = new Set(allTokens);
+      const tokensAddress = [new Set(allTokens)];
+      // console.log("tokensAddressSet", tokensAddressSet.size);
+      // console.log("tokensAddress", tokensAddress);
+      // console.log("tokensAddress.length", tokensAddress.length);
+
+      setTotalTokens(tokensAddressSet.size);
+
+      let allRecipients = data.map((c) => c.recipient);
+      /** Total amount by tokens */
+
+      const totalRecipientSet = new Set(allRecipients);
+      console.log("totalRecipientSet.length", totalRecipientSet.size);
+      setTotalRecipient(totalRecipientSet.size);
+
+      let verifDataText = `You are about to send ${data.length} tx, with a total of ${totalRecipientSet.size} recipients, and using ${tokensAddressSet.size} tokens. \n`;
+      /** TODO calculation amount by tokens */
+      setVerificationData(verifDataText);
+
+      if(batchType == BatchType.ERC20) {
+        generateSummaryData(tokensAddressSet, datas, verifDataText)
+      }
+
+
+    } catch (e) {
+      console.log("Error read info", e);
+    }
   };
   const generateBatchTxByCsv = (file: File) => {
     try {
@@ -170,7 +210,7 @@ const UploadCSV: React.FC<IReadData> = ({ fileParent, setFile }: IReadData) => {
         const formData = new FormData();
         formData.append("csv", file);
         await generateBatchTxByCsv(file);
-        setCanTryBatch(true)
+        setCanTryBatch(true);
       }
     } catch (e) {
       console.log("error generate Batch", e);
@@ -196,11 +236,15 @@ const UploadCSV: React.FC<IReadData> = ({ fileParent, setFile }: IReadData) => {
           csvData={csvData}
           verifData={verifData}
           isDisabledModal={canTryBatch}
+          summaryData={summaryData}
         ></BatchTxModal>
       </Box>
 
       <Box>
         <Text> {verifData}</Text>
+      </Box>
+      <Box>
+        <Text> {summaryData}</Text>
       </Box>
 
       <div>

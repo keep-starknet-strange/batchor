@@ -39,7 +39,8 @@ interface IBatchModal {
   csvData?: any[];
   verifData?: string;
   isDisabledModal?: boolean;
-  batchType?:BatchType
+  batchType?: BatchType;
+  summaryData?: string;
 }
 
 const BatchTxModal = ({
@@ -51,7 +52,8 @@ const BatchTxModal = ({
   csvData,
   verifData,
   isDisabledModal,
-  batchType
+  batchType,
+  summaryData,
 }: IBatchModal) => {
   const color = useColorModeValue("gray.800", "gray.300");
   const bg = useColorModeValue("gray.300", "gray.800");
@@ -191,7 +193,7 @@ const BatchTxModal = ({
       const multicall = await account.execute(callsData);
       toast({
         title: "Tx execute. Waiting for confirmation",
-        description:`${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`,
+        description: `${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`,
         status: "info",
         isClosable: true,
       });
@@ -219,7 +221,6 @@ const BatchTxModal = ({
         });
       }
       setIsLoadingTx(false);
-
     } catch (e) {
       console.log("sendTx error", e);
       setIsLoadingTx(false);
@@ -248,7 +249,8 @@ const BatchTxModal = ({
         aria-describedby="modal-description"
         isOpen={modalOpen}
         onClose={() => onClose}
-        size={"md"}
+        // size={"md"}
+        size={"lg"}
       >
         <ModalOverlay></ModalOverlay>
         <ModalContent color={color} bg={bg} minH={{ base: "50vh" }}>
@@ -269,6 +271,16 @@ const BatchTxModal = ({
                 </Box>
               )}
               {verifData && <Text>{verifData}</Text>}
+              {summaryData && (
+                <Text
+                  maxW="150px" // Set the maximum width for the text
+                  // overflow="hidden" // Hide any overflow content
+                  whiteSpace="nowrap" // Prevent text from wrapping to the next line
+                  textOverflow="ellipsis" // Show ellipsis (...) for truncated text
+                >
+                  {summaryData}
+                </Text>
+              )}
 
               {txState && (
                 <Box>
