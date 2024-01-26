@@ -4,7 +4,7 @@ import UploadCSV from "./UploadCSV"
 import { useState } from "react"
 import { BatchType } from "../../types"
 interface IContainerCsv {
-    batchType:BatchType
+    batchType?:BatchType
 }
 export const ContainerCSV = ({batchType}:IContainerCsv) => {
 
@@ -18,7 +18,7 @@ export const ContainerCSV = ({batchType}:IContainerCsv) => {
             <UploadCSV
                 fileParent={file}
                 setFile={setFile}
-                batchType={batchType}
+                // batchType={batchType}
 
             ></UploadCSV>
             {/* <ReadCSV

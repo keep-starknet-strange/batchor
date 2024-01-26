@@ -20,15 +20,17 @@ import { BatchType } from "../../types";
 interface IReadData {
   fileParent?: File;
   setFile: (file: File) => void;
-  batchType: BatchType;
+  // batchType: BatchType;
 }
 
 const UploadCSV: React.FC<IReadData> = ({
   fileParent,
   setFile,
-  batchType,
+  // batchType,
 }: IReadData) => {
   const [file, setFileChild] = useState<File | null | undefined>(fileParent);
+  const [batchType, setBatchType] = useState<BatchType>(BatchType.ERC20)
+
   const [totalTokens, setTotalTokens] = useState<number | undefined>();
   const [canTryBatch, setCanTryBatch] = useState<boolean | undefined>(false);
   const [totalTx, setTotalTx] = useState<number | undefined>();
@@ -42,6 +44,14 @@ const UploadCSV: React.FC<IReadData> = ({
   const account = accountStarknet.account;
   const { isOpen, onClose, onOpen } = useDisclosure();
   const [array, setArray] = useState<Uint8Array | undefined>();
+
+  const handleCloseModal = () => {
+    setCsvData([])
+    setCanTryBatch(false)
+    setVerificationData(undefined)
+    setSummaryData(undefined)
+    onClose()
+  }
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFileChild(e.target.files[0]);
@@ -61,30 +71,43 @@ const UploadCSV: React.FC<IReadData> = ({
     return expectedColumns.every((col) => Object.keys(firstRow).includes(col));
   };
 
-  const generateSummaryData = (tokensAddressSet:Set<string>, datas:any[], verifDataText:string) => {
+
+  const hasExpectedColumnsERC721 = (jsonData: any[]): boolean => {
+    // Define the expected column names
+    const expectedColumns = ["token_address", "recipient", "token_id"];
+
+    // Get the columns from the first data row
+    const firstRow = jsonData[0];
+    if (!firstRow) return false;
+
+    // Check if all expected columns are present
+    return expectedColumns.every((col) => Object.keys(firstRow).includes(col));
+  };
+
+  const generateSummaryData = (tokensAddressSet: Set<string>, datas: any[], verifDataText: string) => {
     let sumAmountByToken: Map<string, number> = new Map();
     if (batchType == BatchType?.ERC20) {
       for (let contractAddress of Array.from(tokensAddressSet.values())) {
-        sumAmountByToken[contractAddress]=0;
+        sumAmountByToken[contractAddress] = 0;
         sumAmountByToken.set(contractAddress, 0);
         datas?.filter((callData) => {
           if (callData?.token_address == contractAddress) {
             let amount = Number(callData?.amount);
             // console.log("Number(callData?.amount)", Number(callData?.amount));
             const value = sumAmountByToken.get(contractAddress)
-            sumAmountByToken.set(contractAddress, amount+value)
+            sumAmountByToken.set(contractAddress, amount + value)
             return callData?.amount;
           }
         });
       }
     }
     let summaryData = `Sum amount by tokens :\n`;
-    Array.from(sumAmountByToken.keys()).map((key)=> {
+    Array.from(sumAmountByToken.keys()).map((key) => {
       const value = sumAmountByToken.get(key)
-      const keyLen= key.length
-      const truncAddress =`${key.slice(0,10)}...${key.slice(keyLen-10,keyLen)} `
+      const keyLen = key.length
+      const truncAddress = `${key.slice(0, 10)}...${key.slice(keyLen - 10, keyLen)} `
       // verifDataText+=`${truncAddress} : ${value}\n`
-      summaryData+=`${truncAddress} : ${value}\n`
+      summaryData += `${truncAddress} : ${value}\n`
     })
 
     setSummaryData(summaryData)
@@ -93,60 +116,120 @@ const UploadCSV: React.FC<IReadData> = ({
   const readInfo = (datas?: any[]) => {
     try {
       console.log("readInfo", datas);
-      const data = datas?.map((row, index) => {
-        console.log("index", index);
-        console.log("row", row);
-        const tokenAddress = String(row["token_address"]);
-        const lenTokenAddress = String(tokenAddress).length;
-        console.log("tokenAddress", tokenAddress);
 
-        const recipient = String(row["recipient"]);
-        console.log("recipient", recipient);
+      if (batchType == BatchType.ERC20) {
 
-        const lenRecipientAddress = String(recipient).length;
+        const data = datas?.map((row, index) => {
+          console.log("index", index);
+          console.log("row", row);
+          const tokenAddress = String(row["token_address"]);
+          const lenTokenAddress = String(tokenAddress).length;
+          console.log("tokenAddress", tokenAddress);
 
-        const amount = String(row["amount"]);
-        console.log("amount", amount);
+          const recipient = String(row["recipient"]);
+          console.log("recipient", recipient);
 
-        console.log("lenTokenAddress", lenTokenAddress);
+          const lenRecipientAddress = String(recipient).length;
 
-        return {
-          amount: amount,
-          recipient,
-          token_address: tokenAddress,
-        };
-      });
+          const amount = String(row["amount"]);
+          console.log("amount", amount);
 
-      console.log("read info data", data);
-      setTotalTx(data.length);
+          console.log("lenTokenAddress", lenTokenAddress);
 
-      /** @TODO create text verification with stats */
-      /** Find unique tokens */
-      let allTokens = data.map((c) => c.token_address);
-      // console.log("allTokens", allTokens);
+          return {
+            amount: amount,
+            recipient,
+            token_address: tokenAddress,
+          };
+        });
 
-      const tokensAddressSet = new Set(allTokens);
-      const tokensAddress = [new Set(allTokens)];
-      // console.log("tokensAddressSet", tokensAddressSet.size);
-      // console.log("tokensAddress", tokensAddress);
-      // console.log("tokensAddress.length", tokensAddress.length);
+        console.log("read info data", data);
+        setTotalTx(data.length);
 
-      setTotalTokens(tokensAddressSet.size);
+        /** @TODO create text verification with stats */
+        /** Find unique tokens */
+        let allTokens = data.map((c) => c.token_address);
 
-      let allRecipients = data.map((c) => c.recipient);
-      /** Total amount by tokens */
+        const tokensAddressSet = new Set(allTokens);
+        const tokensAddress = [new Set(allTokens)];
+        setTotalTokens(tokensAddressSet.size);
 
-      const totalRecipientSet = new Set(allRecipients);
-      console.log("totalRecipientSet.length", totalRecipientSet.size);
-      setTotalRecipient(totalRecipientSet.size);
+        let allRecipients = data.map((c) => c.recipient);
+        /** Total amount by tokens */
+        const totalRecipientSet = new Set(allRecipients);
+        console.log("totalRecipientSet.length", totalRecipientSet.size);
+        setTotalRecipient(totalRecipientSet.size);
 
-      let verifDataText = `You are about to send ${data.length} tx, with a total of ${totalRecipientSet.size} recipients, and using ${tokensAddressSet.size} tokens. \n`;
-      /** TODO calculation amount by tokens */
-      setVerificationData(verifDataText);
+        let verifDataText = `You are about to send ${data.length} tx, with a total of ${totalRecipientSet.size} recipients, and using ${tokensAddressSet.size} tokens. \n`;
+        /** TODO calculation amount by tokens */
+        setVerificationData(verifDataText);
 
-      if(batchType == BatchType.ERC20) {
-        generateSummaryData(tokensAddressSet, datas, verifDataText)
+        if (batchType == BatchType.ERC20) {
+          generateSummaryData(tokensAddressSet, datas, verifDataText)
+        }
+
+        setCanTryBatch(true);
+
+
       }
+      else if (batchType == BatchType.ERC721) {
+
+        const data = datas?.map((row, index) => {
+          console.log("index", index);
+          console.log("row", row);
+          const tokenAddress = String(row["token_address"]);
+          const lenTokenAddress = String(tokenAddress).length;
+          console.log("tokenAddress", tokenAddress);
+
+          const recipient = String(row["recipient"]);
+          console.log("recipient", recipient);
+
+          const lenRecipientAddress = String(recipient).length;
+
+          const token_id = String(row["token_id"]);
+          console.log("amount", token_id);
+
+          console.log("lenTokenAddress", lenTokenAddress);
+
+          return {
+            token_id: token_id,
+            recipient,
+            token_address: tokenAddress,
+          };
+        });
+
+        console.log("read info data", data);
+        setTotalTx(data.length);
+
+        /** @TODO create text verification with stats */
+        /** Find unique tokens */
+        let allTokens = data.map((c) => c.token_address);
+        // console.log("allTokens", allTokens);
+
+        const tokensAddressSet = new Set(allTokens);
+        const tokensAddress = [new Set(allTokens)];
+        // console.log("tokensAddressSet", tokensAddressSet.size);
+        // console.log("tokensAddress", tokensAddress);
+        // console.log("tokensAddress.length", tokensAddress.length);
+
+        setTotalTokens(tokensAddressSet.size);
+
+        let allRecipients = data.map((c) => c.recipient);
+        /** Total amount by tokens */
+
+        const totalRecipientSet = new Set(allRecipients);
+        console.log("totalRecipientSet.length", totalRecipientSet.size);
+        setTotalRecipient(totalRecipientSet.size);
+
+        let verifDataText = `You are about to send ${data.length} tx, with a total of ${totalRecipientSet.size} recipients, and using ${tokensAddressSet.size} tokens. \n`;
+        /** TODO calculation amount by tokens */
+        setVerificationData(verifDataText);
+
+
+        setCanTryBatch(true)
+
+      }
+
 
 
     } catch (e) {
@@ -171,15 +254,26 @@ const UploadCSV: React.FC<IReadData> = ({
           console.log("worksheet", worksheet);
           const jsonData = xlsx.utils.sheet_to_json(worksheet, { raw: false });
           console.log("jsonData", jsonData);
-          if (!hasExpectedColumns(jsonData)) {
-            setError("CSV file does not have the expected columns.");
-            toast({
-              title: error,
-              status: "warning",
-            });
-            return;
-          }
 
+          if (batchType == BatchType.ERC20) {
+            if (!hasExpectedColumns(jsonData)) {
+              setError("CSV file does not have the expected columns.");
+              toast({
+                title: error,
+                status: "warning",
+              });
+              return;
+            }
+          } else {
+            if (!hasExpectedColumnsERC721(jsonData)) {
+              setError("CSV file does not have the expected columns.");
+              toast({
+                title: error,
+                status: "warning",
+              });
+              return;
+            }
+          }
           console.log("jsonData", jsonData);
           setCsvData(jsonData);
           readInfo(jsonData);
@@ -188,14 +282,20 @@ const UploadCSV: React.FC<IReadData> = ({
         }
       };
       const array = reader.readAsBinaryString(file);
-      return result;
+      return {
+        isGenerate: true,
+      };
     } catch (e) {
       console.log("generateBatchTx Issue", e);
+      return {
+
+      }
     }
   };
 
   const handleUpload = async () => {
     try {
+      console.log("handke upload")
       if (!file) {
         toast({
           title:
@@ -209,8 +309,13 @@ const UploadCSV: React.FC<IReadData> = ({
         });
         const formData = new FormData();
         formData.append("csv", file);
-        await generateBatchTxByCsv(file);
-        setCanTryBatch(true);
+        let { isGenerate } = await generateBatchTxByCsv(file);
+        console.log("generate batch tx done",)
+        // if (isGenerate) {
+        //   setCanTryBatch(true);
+        // }
+        // console.log("setCanTryBatch to true", canTryBatch)
+
       }
     } catch (e) {
       console.log("error generate Batch", e);
@@ -219,24 +324,50 @@ const UploadCSV: React.FC<IReadData> = ({
 
   return (
     <Box>
+
+
+      <Box
+        py={{ base: "0.5em" }}
+        display={{ base: "flex" }}
+        gap={{ base: "0.5em" }}
+      >
+        <Button
+
+          background={batchType == BatchType.ERC20 && "brand.primary"}
+          onClick={() => {
+            setBatchType(BatchType.ERC20)
+            setCanTryBatch(false)
+          }
+
+          }>ERC20</Button>
+        <Button
+          background={batchType == BatchType.ERC721 && "brand.primary"}
+          onClick={() => {
+            setBatchType(BatchType.ERC721)
+            setCanTryBatch(false)
+          }
+          }>ERC721</Button>
+      </Box>
       {error && <Text>{error}</Text>}
-      <Input type="file" accept=".csv" onChange={handleFileChange} />
-      <Button onClick={handleUpload}>Upload CSV</Button>
 
-      {csvData?.length > 0 &&
-        csvData?.map((c, i) => {
-          return <Box>{c[0]}</Box>;
-        })}
+      <input
+        type="file" accept=".csv" onChange={handleFileChange}
+      />
+      <Button
+        py={{ base: "0.5em" }}
+        onClick={handleUpload}>Upload CSV</Button>
 
-      <Box py={{ base: "1em" }} width={{ base: "200px" }}>
+      <Box py={{ base: "1em", md: "2em" }} width={{ base: "200px" }}>
         <BatchTxModal
           onOpen={onOpen}
-          onClose={onClose}
+          onClose={handleCloseModal}
           modalOpen={isOpen}
           csvData={csvData}
           verifData={verifData}
           isDisabledModal={canTryBatch}
           summaryData={summaryData}
+          isCanTryBatch={canTryBatch}
+          batchType={batchType}
         ></BatchTxModal>
       </Box>
 
@@ -253,7 +384,7 @@ const UploadCSV: React.FC<IReadData> = ({
           <Thead>
             <Tr>
               <Th>Token address</Th>
-              <Th>Amount</Th>
+              <Th>{batchType == BatchType.ERC20 ? "Amount" : "Token id"}</Th>
               <Th>Recipient</Th>
             </Tr>
           </Thead>
@@ -261,31 +392,62 @@ const UploadCSV: React.FC<IReadData> = ({
             {csvData &&
               csvData?.length > 0 &&
               csvData?.map((row, index) => {
-                const tokenAddress = String(row["token_address"]);
-                const lenTokenAddress = String(tokenAddress).length;
-                const recipient = String(row["recipient"]);
-                const lenRecipientAddress = String(recipient).length;
-                const amount = String(row["amount"]);
-                return (
-                  <tr key={index}>
-                    <Td>
-                      {tokenAddress.slice(0, 10)} ...
-                      {tokenAddress.slice(
-                        lenTokenAddress - 10,
-                        lenTokenAddress
-                      )}{" "}
-                    </Td>
-                    <Td>{amount}</Td>
-                    <Td>
-                      {recipient.slice(0, 10)} ...{" "}
-                      {recipient.slice(
-                        lenRecipientAddress - 10,
-                        lenRecipientAddress
-                      )}
-                    </Td>
-                  </tr>
-                );
-              })}
+
+                if (batchType == BatchType.ERC20) {
+                  const tokenAddress = String(row["token_address"]);
+                  const lenTokenAddress = String(tokenAddress).length;
+                  const recipient = String(row["recipient"]);
+                  const lenRecipientAddress = String(recipient).length;
+                  const amount = String(row["amount"]);
+                  return (
+                    <tr key={index}>
+                      <Td>
+                        {tokenAddress.slice(0, 10)} ...
+                        {tokenAddress.slice(
+                          lenTokenAddress - 10,
+                          lenTokenAddress
+                        )}{" "}
+                      </Td>
+                      <Td>{amount}</Td>
+                      <Td>
+                        {recipient.slice(0, 10)} ...{" "}
+                        {recipient.slice(
+                          lenRecipientAddress - 10,
+                          lenRecipientAddress
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                }
+                else if (batchType == BatchType.ERC721) {
+                  const tokenAddress = String(row["token_address"]);
+                  const lenTokenAddress = String(tokenAddress).length;
+                  const recipient = String(row["recipient"]);
+                  const lenRecipientAddress = String(recipient).length;
+                  const token_id = String(row["token_id"]);
+                  return (
+                    <tr key={index}>
+                      <Td>
+                        {tokenAddress.slice(0, 10)} ...
+                        {tokenAddress.slice(
+                          lenTokenAddress - 10,
+                          lenTokenAddress
+                        )}{" "}
+                      </Td>
+                      <Td>{token_id}</Td>
+                      <Td>
+                        {recipient.slice(0, 10)} ...{" "}
+                        {recipient.slice(
+                          lenRecipientAddress - 10,
+                          lenRecipientAddress
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                }
+
+              }
+              )}
           </Tbody>
         </Table>
       </div>

@@ -15,7 +15,6 @@ import { useState } from "react";
 const Home: NextPage = ({}) => {
   const color = useColorModeValue("gray.900", "gray.300");
 
-  const [batchType, setBatchType] = useState<BatchType>(BatchType.ERC20)
   return (
     <>
       <HeaderSEO></HeaderSEO>
@@ -58,7 +57,7 @@ const Home: NextPage = ({}) => {
                 </Text>
 
                 <ContainerCSV
-                batchType={batchType}
+                // batchType={batchType}
                 ></ContainerCSV>
               </Box>
 

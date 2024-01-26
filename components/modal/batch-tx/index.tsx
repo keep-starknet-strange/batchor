@@ -14,6 +14,8 @@ import {
 } from "@chakra-ui/react";
 import { useAccount, useProvider } from "@starknet-react/core";
 import { CONFIG_WEBSITE } from "../../../constants";
+/** @TODO compile and add ABI for ERC721*/
+import TokenERC721Abi from "../../../constants/abi/token_erc20.json";
 import TokenERC20Abi from "../../../constants/abi/token_erc20.json";
 import {
   Call,
@@ -39,6 +41,7 @@ interface IBatchModal {
   csvData?: any[];
   verifData?: string;
   isDisabledModal?: boolean;
+  isCanTryBatch?: boolean;
   batchType?: BatchType;
   summaryData?: string;
 }
@@ -52,6 +55,7 @@ const BatchTxModal = ({
   csvData,
   verifData,
   isDisabledModal,
+  isCanTryBatch,
   batchType,
   summaryData,
 }: IBatchModal) => {
@@ -110,66 +114,109 @@ const BatchTxModal = ({
       alert(error.message);
     }
   };
+
+  const prepareNftCallTransfer = async (
+    contractAddress: string,
+    recipient: string,
+    token_id: number
+  ) => {
+    try {
+      // initialize contract using abi, address and provider
+      console.log("contractAddress", contractAddress);
+      console.log("recipient", recipient);
+      console.log("token_id", token_id);
+
+      /** TODO add  */
+      const contract = new Contract(
+        TokenERC721Abi.abi,
+        contractAddress,
+        account
+      );
+
+      const myCall: Call = contract.populate("transfer", [
+        address,// from
+        recipient,// from
+        token_id, // token_id
+      ]);
+      return myCall;
+    } catch (error: any) {
+      console.log("error",error)
+      alert(error.message);
+      return undefined
+    }
+  };
   // prepare each call data to transfer amount of token to the recipient
   const prepareTx = async () => {
     try {
       console.log("csvData", csvData);
-      if(csvData && csvData?.length == 0) {
+      if (csvData && csvData?.length == 0) {
         toast({
-          title:"Csv data not upload correctly. Please verify your CSV",
-          status:"warning",
-          isClosable:true
+          title: "Csv data not upload correctly. Please verify your CSV",
+          status: "warning",
+          isClosable: true
         })
         return;
       }
       csvData?.map(async (row, index) => {
         const tokenAddress = String(row["token_address"]);
         const lenTokenAddress = String(tokenAddress).length;
-  
+
         const recipient = String(row["recipient"]);
         const lenRecipientAddress = String(recipient).length;
         const amount = String(row["amount"]);
-  
+        const token_id = String(row["token_id"]);
+
         if (cairo.isTypeContractAddress(tokenAddress)) {
           toast({
             title: `Wrong token address in the row number ${index}`,
           });
           return;
         }
-  
+
         if (cairo.isTypeContractAddress(recipient)) {
           toast({
             title: `Wrong recipient in the row number ${index}`,
           });
           return;
         }
-  
+
         const contract = new Contract(TokenERC20Abi.abi, tokenAddress, account);
-        let decimals = await contract.decimals();
-        console.log("decimals", decimals);
-        // await transfer(tokenAddress, recipient, Number(amount));
-        let call = await prepareCallTransfer(
-          tokenAddress,
-          recipient,
-          Number(amount)
-        );
+        let decimals = 18;
+        let call: Call|undefined;
+
+        if (batchType == BatchType.ERC20) {
+          call = await prepareCallTransfer(
+            tokenAddress,
+            recipient,
+            Number(amount)
+          );
+          decimals = await contract.decimals() ?? 18;
+          console.log("call ERC20", call);
+        } else if (batchType == BatchType.ERC721) {
+          call = await prepareNftCallTransfer(
+            tokenAddress,
+            recipient,
+            Number(token_id)
+          );
+          console.log("call ERC721", call);
+        }
         console.log("call", call);
-  
-        calls.push(call);
-  
+
+        if (call) {
+          calls.push(call);
+        }
         row["decimals"] = decimals;
-  
         return call;
       });
-  
+
       setCallData(calls);
       setIsBatchCanBeSend(true);
-  
+
       console.log("calls", calls);
-    }catch(e) {
-      console.log("Error prepare tx",e)
+    } catch (e) {
+      console.log("Error prepare tx", e)
     }
- 
+
   };
 
   const sendTx = async () => {
@@ -199,13 +246,13 @@ const BatchTxModal = ({
 
       console.log("calls", calls);
       const multicall = await account.execute(callsData);
+      setTxHash(multicall?.transaction_hash);
       toast({
         title: "Tx execute. Waiting for confirmation",
-        description: `${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`,
+        description: `${CONFIG_WEBSITE.page.explorer}/tx/${multicall.transaction_hash}`,
         status: "info",
         isClosable: true,
       });
-      setTxHash(multicall?.transaction_hash);
       let tx = await provider.waitForTransaction(multicall.transaction_hash);
       txSend = tx;
       setTxState(tx);
@@ -240,13 +287,17 @@ const BatchTxModal = ({
       setIsLoadingTx(false);
     }
   };
+
+  const handleClose = () => {
+    onClose()
+  }
   return (
     <Box>
       <Button
         onClick={onOpen}
         bg={{ base: "brand.primary" }}
         width={"100%"}
-        isDisabled={!isDisabledModal || isLoadingTx}
+        isDisabled={!isCanTryBatch}
         {...restButton}
       >
         Try batch
@@ -296,8 +347,8 @@ const BatchTxModal = ({
                   {(txState?.status == TransactionStatus?.REJECTED ||
                     txState?.status == TransactionStatus?.REVERTED ||
                     txState?.status == TransactionStatus?.NOT_RECEIVED) && (
-                    <Text>Tx failed or rejected</Text>
-                  )}
+                      <Text>Tx failed or rejected</Text>
+                    )}
                   {txState.status == TransactionStatus?.ACCEPTED_ON_L1 ? (
                     <Text>Accepted TX on L1 .</Text>
                   ) : (
@@ -319,13 +370,13 @@ const BatchTxModal = ({
               )}
 
               <Box
-              display={"grid"}
-              gridTemplateColumns={{md:"repeat(2,1fr)"}}
-              gap={{base:"0.5em"}}
+                display={"grid"}
+                gridTemplateColumns={{ md: "repeat(2,1fr)" }}
+                gap={{ base: "0.5em" }}
               >
                 <Button onClick={() => prepareTx()}>Prepare batch</Button>
                 <Button onClick={() => sendTx()} isDisabled={!isBatchCanBeSend}
-                bg={{base:"brand.primary"}}
+                  bg={{ base: "brand.primary" }}
                 >
                   Batch tx
                 </Button>
