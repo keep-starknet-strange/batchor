@@ -13,9 +13,8 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { useAccount, useProvider } from "@starknet-react/core";
-import { CONFIG_WEBSITE } from "../../../constants";
-/** @TODO compile and add ABI for ERC721*/
-import TokenERC721Abi from "../../../constants/abi/token_erc20.json";
+import { ADDRESS_LENGTH, CONFIG_WEBSITE } from "../../../constants";
+import TokenERC721Abi from "../../../constants/abi/erc721_token.json";
 import TokenERC20Abi from "../../../constants/abi/token_erc20.json";
 import {
   Call,
@@ -44,6 +43,7 @@ interface IBatchModal {
   isCanTryBatch?: boolean;
   batchType?: BatchType;
   summaryData?: string;
+  summaryNode?:React.ReactNode
 }
 
 const BatchTxModal = ({
@@ -58,6 +58,7 @@ const BatchTxModal = ({
   isCanTryBatch,
   batchType,
   summaryData,
+  summaryNode
 }: IBatchModal) => {
   const color = useColorModeValue("gray.800", "gray.300");
   const bg = useColorModeValue("gray.300", "gray.800");
@@ -126,23 +127,28 @@ const BatchTxModal = ({
       console.log("recipient", recipient);
       console.log("token_id", token_id);
 
-      /** TODO add  */
+      /** @TODO add compile */
       const contract = new Contract(
         TokenERC721Abi.abi,
         contractAddress,
         account
       );
 
-      const myCall: Call = contract.populate("transfer", [
-        address,// from
-        recipient,// from
-        token_id, // token_id
-      ]);
-      return myCall;
-    } catch (error: any) {
-      console.log("error",error)
+      let call = {
+        contractAddress: contractAddress,
+        entrypoint: "transfer",
+        calldata: CallData.compile({
+          from: account?.address,
+          to: contractAddress, // to
+          token_id: token_id,
+        }),
+      };
+      // return myCall;
+      return call;
+    } catch (error) {
+      console.log("error", error);
       alert(error.message);
-      return undefined
+      return undefined;
     }
   };
   // prepare each call data to transfer amount of token to the recipient
@@ -153,8 +159,8 @@ const BatchTxModal = ({
         toast({
           title: "Csv data not upload correctly. Please verify your CSV",
           status: "warning",
-          isClosable: true
-        })
+          isClosable: true,
+        });
         return;
       }
       csvData?.map(async (row, index) => {
@@ -166,14 +172,20 @@ const BatchTxModal = ({
         const amount = String(row["amount"]);
         const token_id = String(row["token_id"]);
 
-        if (cairo.isTypeContractAddress(tokenAddress)) {
+        if (
+          !cairo.isTypeContractAddress(tokenAddress) &&
+          ADDRESS_LENGTH != tokenAddress.length
+        ) {
           toast({
             title: `Wrong token address in the row number ${index}`,
           });
           return;
         }
 
-        if (cairo.isTypeContractAddress(recipient)) {
+        if (
+          !cairo.isTypeContractAddress(recipient) &&
+          ADDRESS_LENGTH != tokenAddress.length
+        ) {
           toast({
             title: `Wrong recipient in the row number ${index}`,
           });
@@ -182,7 +194,7 @@ const BatchTxModal = ({
 
         const contract = new Contract(TokenERC20Abi.abi, tokenAddress, account);
         let decimals = 18;
-        let call: Call|undefined;
+        let call: Call | undefined;
 
         if (batchType == BatchType.ERC20) {
           call = await prepareCallTransfer(
@@ -190,7 +202,7 @@ const BatchTxModal = ({
             recipient,
             Number(amount)
           );
-          decimals = await contract.decimals() ?? 18;
+          decimals = (await contract.decimals()) ?? 18;
           console.log("call ERC20", call);
         } else if (batchType == BatchType.ERC721) {
           call = await prepareNftCallTransfer(
@@ -210,13 +222,16 @@ const BatchTxModal = ({
       });
 
       setCallData(calls);
+
+      /** @TODO check calls data length */
+      // if(calls.length !=0 ) {
       setIsBatchCanBeSend(true);
+      // }
 
       console.log("calls", calls);
     } catch (e) {
-      console.log("Error prepare tx", e)
+      console.log("Error prepare tx", e);
     }
-
   };
 
   const sendTx = async () => {
@@ -289,8 +304,9 @@ const BatchTxModal = ({
   };
 
   const handleClose = () => {
-    onClose()
-  }
+    setIsBatchCanBeSend(false);
+    onClose();
+  };
   return (
     <Box>
       <Button
@@ -307,14 +323,14 @@ const BatchTxModal = ({
         aria-labelledby="modal-title"
         aria-describedby="modal-description"
         isOpen={modalOpen}
-        onClose={() => onClose}
+        onClose={() => handleClose}
         // size={"md"}
         size={"lg"}
       >
         <ModalOverlay></ModalOverlay>
         <ModalContent color={color} bg={bg} minH={{ base: "50vh" }}>
           <ModalHeader>Connect to {CONFIG_WEBSITE.title} 👋</ModalHeader>
-          <ModalCloseButton onClick={onClose} />
+          <ModalCloseButton onClick={handleClose} />
           <ModalBody>
             <Box
               textAlign={"left"}
@@ -341,14 +357,16 @@ const BatchTxModal = ({
                 </Text>
               )}
 
+              {summaryNode}
+
               {txState && (
                 <Box>
                   {" "}
                   {(txState?.status == TransactionStatus?.REJECTED ||
                     txState?.status == TransactionStatus?.REVERTED ||
                     txState?.status == TransactionStatus?.NOT_RECEIVED) && (
-                      <Text>Tx failed or rejected</Text>
-                    )}
+                    <Text>Tx failed or rejected</Text>
+                  )}
                   {txState.status == TransactionStatus?.ACCEPTED_ON_L1 ? (
                     <Text>Accepted TX on L1 .</Text>
                   ) : (
@@ -375,7 +393,9 @@ const BatchTxModal = ({
                 gap={{ base: "0.5em" }}
               >
                 <Button onClick={() => prepareTx()}>Prepare batch</Button>
-                <Button onClick={() => sendTx()} isDisabled={!isBatchCanBeSend}
+                <Button
+                  onClick={() => sendTx()}
+                  isDisabled={!isBatchCanBeSend}
                   bg={{ base: "brand.primary" }}
                 >
                   Batch tx

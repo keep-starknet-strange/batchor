@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Input,
   Text,
   Box,
   Button,
@@ -36,7 +35,9 @@ const UploadCSV: React.FC<IReadData> = ({
   const [totalTx, setTotalTx] = useState<number | undefined>();
   const [totalRecipient, setTotalRecipient] = useState<number | undefined>();
   const [verifData, setVerificationData] = useState<string | undefined>();
+
   const [summaryData, setSummaryData] = useState<string | undefined>();
+  const [summaryNode, setSummaryNode] = useState<React.ReactNode | undefined>();
   const [csvData, setCsvData] = useState([]);
   const [error, setError] = useState(null);
   const toast = useToast();
@@ -93,7 +94,6 @@ const UploadCSV: React.FC<IReadData> = ({
         datas?.filter((callData) => {
           if (callData?.token_address == contractAddress) {
             let amount = Number(callData?.amount);
-            // console.log("Number(callData?.amount)", Number(callData?.amount));
             const value = sumAmountByToken.get(contractAddress)
             sumAmountByToken.set(contractAddress, amount + value)
             return callData?.amount;
@@ -102,14 +102,27 @@ const UploadCSV: React.FC<IReadData> = ({
       }
     }
     let summaryData = `Sum amount by tokens :\n`;
-    Array.from(sumAmountByToken.keys()).map((key) => {
+    /** @TODO add React node */
+    let allText=Array.from(sumAmountByToken.keys()).map((key) => {
       const value = sumAmountByToken.get(key)
       const keyLen = key.length
       const truncAddress = `${key.slice(0, 10)}...${key.slice(keyLen - 10, keyLen)} `
       // verifDataText+=`${truncAddress} : ${value}\n`
-      summaryData += `${truncAddress} : ${value}\n`
-    })
+      let text= `${truncAddress} : ${value}\n`
+      summaryData +=text
 
+      return text
+    })
+    const SummaryNode = <Box>
+      <Text>Sum amount by tokens </Text>
+      {allText?.map((t,i) => {
+        return(
+          <Text key={i}>{t}</Text>
+        )
+      })}
+    </Box>
+
+    setSummaryNode(SummaryNode)
     setSummaryData(summaryData)
     setVerificationData(verifDataText)
   }
@@ -243,6 +256,7 @@ const UploadCSV: React.FC<IReadData> = ({
       formData.append("csv", file);
       const reader = new FileReader();
       let result;
+      setError(undefined)
 
       reader.onloadend = (e) => {
         try {
@@ -314,8 +328,6 @@ const UploadCSV: React.FC<IReadData> = ({
         // if (isGenerate) {
         //   setCanTryBatch(true);
         // }
-        // console.log("setCanTryBatch to true", canTryBatch)
-
       }
     } catch (e) {
       console.log("error generate Batch", e);
@@ -368,6 +380,7 @@ const UploadCSV: React.FC<IReadData> = ({
           summaryData={summaryData}
           isCanTryBatch={canTryBatch}
           batchType={batchType}
+          summaryNode={summaryNode}
         ></BatchTxModal>
       </Box>
 

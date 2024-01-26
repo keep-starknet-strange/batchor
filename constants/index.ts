@@ -2,7 +2,7 @@ export const CONFIG_WEBSITE = {
   title: "Batchor Starknet",
   description: "Batchor Starknet ERC20 for transactions multicall",
   page: {
-    portal: "https://starknet-io.github.io/tokei/",
+    portal: "https://github.com/keep-starknet-strange/batchor",
     explorer: "https://starkscan.co",
     voyager_explorer: "https://voyager.online",
   },
@@ -10,7 +10,7 @@ export const CONFIG_WEBSITE = {
 
 export const CONFIG_SOCIAL = {
   github: {
-    link: "https://github.com/starknet-io/tokei",
+    link: "https://github.com/keep-starknet-strange/batchor",
   },
   twitter: {
     link: "https://twitter.com/Starknet",
