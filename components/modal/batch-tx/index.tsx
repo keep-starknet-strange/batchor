@@ -27,6 +27,9 @@ import {
 } from "starknet";
 import { useState } from "react";
 import GearLoader from "../../loader/GearLoader";
+import { ExternalStylizedButtonLink } from "../../button/NavItem";
+import { VoyagerExplorerImage } from "../../view/image/VoyagerExplorerImage";
+import { BatchType } from "../../../types";
 interface IBatchModal {
   modalOpen: boolean;
   chatId?: string;
@@ -36,6 +39,7 @@ interface IBatchModal {
   csvData?: any[];
   verifData?: string;
   isDisabledModal?: boolean;
+  batchType?:BatchType
 }
 
 const BatchTxModal = ({
@@ -47,6 +51,7 @@ const BatchTxModal = ({
   csvData,
   verifData,
   isDisabledModal,
+  batchType
 }: IBatchModal) => {
   const color = useColorModeValue("gray.800", "gray.300");
   const bg = useColorModeValue("gray.300", "gray.800");
@@ -55,6 +60,11 @@ const BatchTxModal = ({
   const address = accountStarknet?.account?.address;
   const [isBatchCanBeSend, setIsBatchCanBeSend] = useState<boolean>(false);
   const [isLoadingTx, setIsLoadingTx] = useState<boolean>(false);
+  const [txHash, setTxHash] = useState<string | undefined>();
+  const [txState, setTxState] = useState<
+    GetTransactionReceiptResponse | undefined
+  >();
+
   const { provider } = useProvider();
   const toast = useToast();
   const calls: Call[] = [];
@@ -81,11 +91,9 @@ const BatchTxModal = ({
       let decimals = 18;
 
       try {
-         decimals = await contract.decimals() ?? 18;
-
-      }catch(e) {
-        console.log("decimals can be reach",e)
-
+        decimals = (await contract.decimals()) ?? 18;
+      } catch (e) {
+        console.log("decimals can be reach", e);
       }
       console.log("decimals", decimals);
       let amountSent = Number(
@@ -157,6 +165,7 @@ const BatchTxModal = ({
 
   const sendTx = async () => {
     let txSend: GetTransactionReceiptResponse | undefined;
+
     try {
       setIsLoadingTx(true);
       console.log("sendTx");
@@ -177,10 +186,19 @@ const BatchTxModal = ({
         });
         return;
       }
-     
+
       console.log("calls", calls);
       const multicall = await account.execute(callsData);
+      toast({
+        title: "Tx execute. Waiting for confirmation",
+        description:`${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`,
+        status: "info",
+        isClosable: true,
+      });
+      setTxHash(multicall?.transaction_hash);
       let tx = await provider.waitForTransaction(multicall.transaction_hash);
+      txSend = tx;
+      setTxState(tx);
       console.log("tx", tx.status);
       if (
         tx.status == TransactionStatus.REJECTED ||
@@ -199,10 +217,12 @@ const BatchTxModal = ({
           title: `You tx multicall succeed`,
           description: `Tx hash= ${multicall.transaction_hash}`,
         });
-        setIsLoadingTx(false);
       }
+      setIsLoadingTx(false);
+
     } catch (e) {
       console.log("sendTx error", e);
+      setIsLoadingTx(false);
       toast({
         title: `Error when sending your tx`,
         status: "error",
@@ -249,6 +269,34 @@ const BatchTxModal = ({
                 </Box>
               )}
               {verifData && <Text>{verifData}</Text>}
+
+              {txState && (
+                <Box>
+                  {" "}
+                  {(txState?.status == TransactionStatus?.REJECTED ||
+                    txState?.status == TransactionStatus?.REVERTED ||
+                    txState?.status == TransactionStatus?.NOT_RECEIVED) && (
+                    <Text>Tx failed or rejected</Text>
+                  )}
+                  {txState.status == TransactionStatus?.ACCEPTED_ON_L1 ? (
+                    <Text>Accepted TX on L1 .</Text>
+                  ) : (
+                    txState?.status == TransactionStatus?.ACCEPTED_ON_L2 && (
+                      <Text>Tx accepted in L2</Text>
+                    )
+                  )}
+                </Box>
+              )}
+
+              {txHash && (
+                <Box>
+                  <ExternalStylizedButtonLink
+                    href={`${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`}
+                  >
+                    <VoyagerExplorerImage></VoyagerExplorerImage>
+                  </ExternalStylizedButtonLink>
+                </Box>
+              )}
 
               <Button onClick={() => prepareTx()}>Prepare batch</Button>
               <Button onClick={() => sendTx()} isDisabled={!isBatchCanBeSend}>
