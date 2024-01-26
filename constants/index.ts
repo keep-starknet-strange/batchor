@@ -4,6 +4,7 @@ export const CONFIG_WEBSITE = {
   page: {
     portal: "https://starknet-io.github.io/tokei/",
     explorer: "https://starkscan.co",
+    voyager_explorer: "https://voyager.online",
   },
 };
 

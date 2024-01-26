@@ -10,6 +10,8 @@ import {
   ModalCloseButton,
   useColorModeValue,
   ButtonProps,
+  Image as ImageChakra,
+  Icon,
 } from "@chakra-ui/react";
 import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
 import { CONFIG_WEBSITE } from "../../../constants";
@@ -28,7 +30,7 @@ const ConnectModal = ({
   chatId,
   onClose,
   onOpen,
-  restButton
+  restButton,
 }: IAdminPanelGroup) => {
   const account = useAccount();
   const color = useColorModeValue("gray.800", "gray.300");
@@ -42,8 +44,8 @@ const ConnectModal = ({
       <Button
         onClick={onOpen}
         bg={{ base: "brand.primary" }}
-         width={"100%"}
-         {...restButton}
+        width={"100%"}
+        {...restButton}
       >
         {!address ? "Connect wallet" : "Wallet"}
       </Button>
@@ -60,51 +62,75 @@ const ConnectModal = ({
           <ModalHeader>Connect to {CONFIG_WEBSITE.title} 👋</ModalHeader>
           <ModalCloseButton onClick={onClose} />
           <ModalBody>
-            <Box
-              textAlign={"left"}
-              display={"grid"}
-              width={"100%"}
-              gap={{ base: "0.5em" }}
-            >
-              {connectors.map((connector, i) => {
-                return (
-                  <Button
-                    key={i}
-                    width={{
-                      base: "fit-content",
-                      md: "fit-content",
-                    }}
-                    onClick={(e) => {
-                      if (!connector.available()) {
-                        installWallet(connector.id, e);
-                      }
-                      connect({ connector });
-                    }}
-                  >
-                    <img
-                      className="mr-2 h-7 w-7"
-                      src={`https://iconic.dynamic-static-assets.com/icons/sprite.svg#${connector.id.toLocaleLowerCase()}`}
-                      alt="wallet"
-                    />
-                    {connector.available ? "Connect " : "Install "}
+            {!accountStarknet?.account &&
+              !accountStarknet?.account?.address && (
+                <Box
+                  textAlign={"left"}
+                  display={"grid"}
+                  width={"100%"}
+                  gap={{ base: "0.5em" }}
+                >
+                  {connectors.map((connector, i) => {
+                    return (
+                      <Button
+                        key={i}
+                        width={{
+                          base: "fit-content",
+                          md: "fit-content",
+                        }}
+                        onClick={(e) => {
+                          if (!connector.available()) {
+                            installWallet(connector.id, e);
+                          }
+                          connect({ connector });
+                        }}
+                      >
+                        <img
+                          className="mr-2 h-7 w-7"
+                          src={`https://iconic.dynamic-static-assets.com/icons/sprite.svg#${connector.id.toLocaleLowerCase()}`}
+                          alt="wallet"
+                        />
+                        {connector.available ? "Connect " : "Install "}
 
-                    {connector.id.charAt(0).toUpperCase() +
-                      connector.id.slice(1)}
-                    {/* {connector?.name} */}
-                  </Button>
-                );
-              })}
-            </Box>
+                        {connector.id.charAt(0).toUpperCase() +
+                          connector.id.slice(1)}
+                        {/* {connector?.name} */}
+                      </Button>
+                    );
+                  })}
+                </Box>
+              )}
+
             {accountStarknet?.account && (
               <Box>
                 <Text>Address: {address}</Text>
                 <Box display={"grid"} gap={{ base: "0.5em" }}>
-                  <ExternalStylizedButtonLink
-                    href={`${CONFIG_WEBSITE.page?.explorer}/contract/${address}`}
-                    width={"150px"}
+                  <Box
+                    gap={"1em"}
+                    // justifyContent={"space-around"}
+                    display={{ base: "block", md: "flex" }}
                   >
-                    Explorer
-                  </ExternalStylizedButtonLink>
+                    <ExternalStylizedButtonLink
+                      href={`${CONFIG_WEBSITE.page?.explorer}/contract/${address}`}
+                      width={"150px"}
+                    >
+                      Explorer
+               
+                    </ExternalStylizedButtonLink>
+                    <ExternalStylizedButtonLink
+                      href={`${CONFIG_WEBSITE.page?.voyager_explorer}/contract/${address}`}
+                      width={"150px"}
+                    >
+                      {/* Voyager Explorer */}
+                      <ImageChakra
+                      w={{base:"110px"}}
+                      src='/assets/voyager_explorer.svg'
+                      >
+
+                      </ImageChakra>
+                    </ExternalStylizedButtonLink>
+                  </Box>
+
                   <Button
                     w={"150px"}
                     onClick={() => {

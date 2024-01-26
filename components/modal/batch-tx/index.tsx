@@ -78,7 +78,15 @@ const BatchTxModal = ({
         contractAddress,
         account
       );
-      let decimals = await contract.decimals();
+      let decimals = 18;
+
+      try {
+         decimals = await contract.decimals() ?? 18;
+
+      }catch(e) {
+        console.log("decimals can be reach",e)
+
+      }
       console.log("decimals", decimals);
       let amountSent = Number(
         Number(amount) * 10 ** Number(decimals)
@@ -169,44 +177,7 @@ const BatchTxModal = ({
         });
         return;
       }
-      const data = csvData?.map((row, index) => {
-        console.log("index", index);
-        console.log("row", row);
-        const tokenAddress = String(row["token_address"]);
-        const lenTokenAddress = String(tokenAddress).length;
-
-        const recipient = String(row["recipient"]);
-        const amount = String(row["amount"]);
-        console.log("lenTokenAddress", lenTokenAddress);
-        console.log("tokenAddress", tokenAddress);
-        console.log("recipient", recipient);
-        if (cairo.isTypeContractAddress(tokenAddress)) {
-          toast({
-            title: `Wrong token address in the row number ${index}`,
-          });
-          return;
-        }
-
-        if (cairo.isTypeContractAddress(recipient)) {
-          toast({
-            title: `Wrong recipient in the row number ${index}`,
-          });
-          return;
-        }
-
-        let decimals = row["decimals"];
-        return {
-          contractAddress: tokenAddress,
-          entrypoint: "transfer",
-
-          calldata: CallData.compile({
-            recipient: recipient,
-            amount: Number(amount) * 10 ** Number(decimals) ?? 18,
-          }),
-        };
-      });
-
-      console.log("dataBatch", data);
+     
       console.log("calls", calls);
       const multicall = await account.execute(callsData);
       let tx = await provider.waitForTransaction(multicall.transaction_hash);
