@@ -16,6 +16,7 @@ import * as xlsx from "xlsx";
 import { useAccount } from "@starknet-react/core";
 import BatchTxModal from "../modal/batch-tx";
 import { BatchType } from "../../types";
+import { hasExpectedColumns, hasExpectedColumnsERC721 } from "../../utils/csv";
 interface IReadData {
   fileParent?: File;
   setFile: (file: File) => void;
@@ -25,10 +26,10 @@ interface IReadData {
 const UploadCSV: React.FC<IReadData> = ({
   fileParent,
   setFile,
-  // batchType,
-}: IReadData) => {
+}: // batchType,
+IReadData) => {
   const [file, setFileChild] = useState<File | null | undefined>(fileParent);
-  const [batchType, setBatchType] = useState<BatchType>(BatchType.ERC20)
+  const [batchType, setBatchType] = useState<BatchType>(BatchType.ERC20);
 
   const [totalTokens, setTotalTokens] = useState<number | undefined>();
   const [canTryBatch, setCanTryBatch] = useState<boolean | undefined>(false);
@@ -47,12 +48,12 @@ const UploadCSV: React.FC<IReadData> = ({
   const [array, setArray] = useState<Uint8Array | undefined>();
 
   const handleCloseModal = () => {
-    setCsvData([])
-    setCanTryBatch(false)
-    setVerificationData(undefined)
-    setSummaryData(undefined)
-    onClose()
-  }
+    setCsvData([]);
+    setCanTryBatch(false);
+    setVerificationData(undefined);
+    setSummaryData(undefined);
+    onClose();
+  };
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFileChild(e.target.files[0]);
@@ -60,32 +61,11 @@ const UploadCSV: React.FC<IReadData> = ({
     }
   };
 
-  const hasExpectedColumns = (jsonData: any[]): boolean => {
-    // Define the expected column names
-    const expectedColumns = ["token_address", "recipient", "amount"];
-
-    // Get the columns from the first data row
-    const firstRow = jsonData[0];
-    if (!firstRow) return false;
-
-    // Check if all expected columns are present
-    return expectedColumns.every((col) => Object.keys(firstRow).includes(col));
-  };
-
-
-  const hasExpectedColumnsERC721 = (jsonData: any[]): boolean => {
-    // Define the expected column names
-    const expectedColumns = ["token_address", "recipient", "token_id"];
-
-    // Get the columns from the first data row
-    const firstRow = jsonData[0];
-    if (!firstRow) return false;
-
-    // Check if all expected columns are present
-    return expectedColumns.every((col) => Object.keys(firstRow).includes(col));
-  };
-
-  const generateSummaryData = (tokensAddressSet: Set<string>, datas: any[], verifDataText: string) => {
+  const generateSummaryData = (
+    tokensAddressSet: Set<string>,
+    datas: any[],
+    verifDataText: string
+  ) => {
     let sumAmountByToken: Map<string, number> = new Map();
     if (batchType == BatchType?.ERC20) {
       for (let contractAddress of Array.from(tokensAddressSet.values())) {
@@ -94,44 +74,90 @@ const UploadCSV: React.FC<IReadData> = ({
         datas?.filter((callData) => {
           if (callData?.token_address == contractAddress) {
             let amount = Number(callData?.amount);
-            const value = sumAmountByToken.get(contractAddress)
-            sumAmountByToken.set(contractAddress, amount + value)
+            const value = sumAmountByToken.get(contractAddress);
+            sumAmountByToken.set(contractAddress, amount + value);
             return callData?.amount;
           }
         });
       }
     }
-    let summaryData = `Sum amount by tokens :\n`;
+    // let summaryData = `Sum amount by tokens :\n`;
     /** @TODO add React node */
-    let allText=Array.from(sumAmountByToken.keys()).map((key) => {
-      const value = sumAmountByToken.get(key)
-      const keyLen = key.length
-      const truncAddress = `${key.slice(0, 10)}...${key.slice(keyLen - 10, keyLen)} `
-      // verifDataText+=`${truncAddress} : ${value}\n`
-      let text= `${truncAddress} : ${value}\n`
-      summaryData +=text
+    let allText = Array.from(sumAmountByToken.keys()).map((key) => {
+      const value = sumAmountByToken.get(key);
+      const keyLen = key.length;
+      const truncAddress = `${key.slice(0, 10)}...${key.slice(
+        keyLen - 10,
+        keyLen
+      )} `;
+      let text = `${truncAddress} : ${value}\n`;
+      // summaryData +=text
+      return text;
+    });
+    const SummaryNode = (
+      <Box>
+        <Text>Sum amount by tokens </Text>
+        {allText?.map((t, i) => {
+          return <Text key={i}>{t}</Text>;
+        })}
+      </Box>
+    );
 
-      return text
-    })
-    const SummaryNode = <Box>
-      <Text>Sum amount by tokens </Text>
-      {allText?.map((t,i) => {
-        return(
-          <Text key={i}>{t}</Text>
-        )
-      })}
-    </Box>
+    setSummaryNode(SummaryNode);
+    setSummaryData(summaryData);
+    setVerificationData(verifDataText);
+  };
 
-    setSummaryNode(SummaryNode)
-    setSummaryData(summaryData)
-    setVerificationData(verifDataText)
-  }
+  const generateERC721SummaryData = (
+    tokensAddressSet: Set<string>,
+    datas: any[],
+    verifDataText: string
+  ) => {
+    let sumAmountByToken: Map<string, number> = new Map();
+    if (batchType == BatchType?.ERC721) {
+      for (let contractAddress of Array.from(tokensAddressSet.values())) {
+        sumAmountByToken[contractAddress] = 0;
+        sumAmountByToken.set(contractAddress, 0);
+        datas?.filter((callData) => {
+          if (callData?.token_address == contractAddress) {
+            const value = sumAmountByToken.get(contractAddress);
+            sumAmountByToken.set(contractAddress, 1 + value);
+            return callData?.amount;
+          }
+        });
+      }
+    }
+    // let summaryData = `Sum amount by tokens :\n`;
+    /** @TODO add React node */
+    let allText = Array.from(sumAmountByToken.keys()).map((key) => {
+      const value = sumAmountByToken.get(key);
+      const keyLen = key.length;
+      const truncAddress = `${key.slice(0, 10)}...${key.slice(
+        keyLen - 10,
+        keyLen
+      )} `;
+      let text = `${truncAddress} : ${value}\n`;
+      // summaryData +=text
+      return text;
+    });
+    const SummaryNode = (
+      <Box>
+        <Text>Sum amount by tokens </Text>
+        {allText?.map((t, i) => {
+          return <Text key={i}>{t}</Text>;
+        })}
+      </Box>
+    );
+
+    setSummaryNode(SummaryNode);
+    setSummaryData(summaryData);
+    setVerificationData(verifDataText);
+  };
   const readInfo = (datas?: any[]) => {
     try {
       console.log("readInfo", datas);
 
       if (batchType == BatchType.ERC20) {
-
         const data = datas?.map((row, index) => {
           console.log("index", index);
           console.log("row", row);
@@ -178,15 +204,11 @@ const UploadCSV: React.FC<IReadData> = ({
         setVerificationData(verifDataText);
 
         if (batchType == BatchType.ERC20) {
-          generateSummaryData(tokensAddressSet, datas, verifDataText)
+          generateSummaryData(tokensAddressSet, datas, verifDataText);
         }
 
         setCanTryBatch(true);
-
-
-      }
-      else if (batchType == BatchType.ERC721) {
-
+      } else if (batchType == BatchType.ERC721) {
         const data = datas?.map((row, index) => {
           console.log("index", index);
           console.log("row", row);
@@ -211,7 +233,6 @@ const UploadCSV: React.FC<IReadData> = ({
           };
         });
 
-        console.log("read info data", data);
         setTotalTx(data.length);
 
         /** @TODO create text verification with stats */
@@ -221,9 +242,6 @@ const UploadCSV: React.FC<IReadData> = ({
 
         const tokensAddressSet = new Set(allTokens);
         const tokensAddress = [new Set(allTokens)];
-        // console.log("tokensAddressSet", tokensAddressSet.size);
-        // console.log("tokensAddress", tokensAddress);
-        // console.log("tokensAddress.length", tokensAddress.length);
 
         setTotalTokens(tokensAddressSet.size);
 
@@ -231,20 +249,18 @@ const UploadCSV: React.FC<IReadData> = ({
         /** Total amount by tokens */
 
         const totalRecipientSet = new Set(allRecipients);
-        console.log("totalRecipientSet.length", totalRecipientSet.size);
         setTotalRecipient(totalRecipientSet.size);
 
         let verifDataText = `You are about to send ${data.length} tx, with a total of ${totalRecipientSet.size} recipients, and using ${tokensAddressSet.size} tokens. \n`;
         /** TODO calculation amount by tokens */
         setVerificationData(verifDataText);
 
+        if (batchType == BatchType.ERC721) {
+          generateERC721SummaryData(tokensAddressSet, datas, verifDataText);
+        }
 
-        setCanTryBatch(true)
-
+        setCanTryBatch(true);
       }
-
-
-
     } catch (e) {
       console.log("Error read info", e);
     }
@@ -256,7 +272,7 @@ const UploadCSV: React.FC<IReadData> = ({
       formData.append("csv", file);
       const reader = new FileReader();
       let result;
-      setError(undefined)
+      setError(undefined);
 
       reader.onloadend = (e) => {
         try {
@@ -301,15 +317,13 @@ const UploadCSV: React.FC<IReadData> = ({
       };
     } catch (e) {
       console.log("generateBatchTx Issue", e);
-      return {
-
-      }
+      return {};
     }
   };
 
   const handleUpload = async () => {
     try {
-      console.log("handke upload")
+      console.log("handke upload");
       if (!file) {
         toast({
           title:
@@ -324,7 +338,7 @@ const UploadCSV: React.FC<IReadData> = ({
         const formData = new FormData();
         formData.append("csv", file);
         let { isGenerate } = await generateBatchTxByCsv(file);
-        console.log("generate batch tx done",)
+        console.log("generate batch tx done");
         // if (isGenerate) {
         //   setCanTryBatch(true);
         // }
@@ -336,38 +350,36 @@ const UploadCSV: React.FC<IReadData> = ({
 
   return (
     <Box>
-
-
       <Box
         py={{ base: "0.5em" }}
         display={{ base: "flex" }}
         gap={{ base: "0.5em" }}
       >
         <Button
-
           background={batchType == BatchType.ERC20 && "brand.primary"}
           onClick={() => {
-            setBatchType(BatchType.ERC20)
-            setCanTryBatch(false)
-          }
-
-          }>ERC20</Button>
+            setBatchType(BatchType.ERC20);
+            setCanTryBatch(false);
+          }}
+        >
+          ERC20
+        </Button>
         <Button
           background={batchType == BatchType.ERC721 && "brand.primary"}
           onClick={() => {
-            setBatchType(BatchType.ERC721)
-            setCanTryBatch(false)
-          }
-          }>ERC721</Button>
+            setBatchType(BatchType.ERC721);
+            setCanTryBatch(false);
+          }}
+        >
+          ERC721
+        </Button>
       </Box>
       {error && <Text>{error}</Text>}
 
-      <input
-        type="file" accept=".csv" onChange={handleFileChange}
-      />
-      <Button
-        py={{ base: "0.5em" }}
-        onClick={handleUpload}>Upload CSV</Button>
+      <input type="file" accept=".csv" onChange={handleFileChange} />
+      <Button py={{ base: "0.5em" }} onClick={handleUpload}>
+        Upload CSV
+      </Button>
 
       <Box py={{ base: "1em", md: "2em" }} width={{ base: "200px" }}>
         <BatchTxModal
@@ -405,7 +417,6 @@ const UploadCSV: React.FC<IReadData> = ({
             {csvData &&
               csvData?.length > 0 &&
               csvData?.map((row, index) => {
-
                 if (batchType == BatchType.ERC20) {
                   const tokenAddress = String(row["token_address"]);
                   const lenTokenAddress = String(tokenAddress).length;
@@ -431,8 +442,7 @@ const UploadCSV: React.FC<IReadData> = ({
                       </Td>
                     </tr>
                   );
-                }
-                else if (batchType == BatchType.ERC721) {
+                } else if (batchType == BatchType.ERC721) {
                   const tokenAddress = String(row["token_address"]);
                   const lenTokenAddress = String(tokenAddress).length;
                   const recipient = String(row["recipient"]);
@@ -458,9 +468,7 @@ const UploadCSV: React.FC<IReadData> = ({
                     </tr>
                   );
                 }
-
-              }
-              )}
+              })}
           </Tbody>
         </Table>
       </div>

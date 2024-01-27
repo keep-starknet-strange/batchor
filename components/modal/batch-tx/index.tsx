@@ -43,7 +43,7 @@ interface IBatchModal {
   isCanTryBatch?: boolean;
   batchType?: BatchType;
   summaryData?: string;
-  summaryNode?:React.ReactNode
+  summaryNode?: React.ReactNode;
 }
 
 const BatchTxModal = ({
@@ -58,7 +58,7 @@ const BatchTxModal = ({
   isCanTryBatch,
   batchType,
   summaryData,
-  summaryNode
+  summaryNode,
 }: IBatchModal) => {
   const color = useColorModeValue("gray.800", "gray.300");
   const bg = useColorModeValue("gray.300", "gray.800");
@@ -127,23 +127,27 @@ const BatchTxModal = ({
       console.log("recipient", recipient);
       console.log("token_id", token_id);
 
-      /** @TODO add compile */
       const contract = new Contract(
         TokenERC721Abi.abi,
         contractAddress,
         account
       );
 
-      let call = {
-        contractAddress: contractAddress,
-        entrypoint: "transfer",
-        calldata: CallData.compile({
-          from: account?.address,
-          to: contractAddress, // to
-          token_id: token_id,
-        }),
-      };
-      // return myCall;
+      // let call = {
+      //   contractAddress: contractAddress,
+      //   entrypoint: "transfer_from",
+      //   calldata: CallData.compile({
+      //     from: account?.address,
+      //     to: recipient, // to
+      //     token_id: token_id,
+      //   }),
+      // };
+
+      const call: Call = contract.populate("transfer_from", [
+        account?.address,
+        recipient,
+        token_id
+      ]);
       return call;
     } catch (error) {
       console.log("error", error);
@@ -172,24 +176,27 @@ const BatchTxModal = ({
         const amount = String(row["amount"]);
         const token_id = String(row["token_id"]);
 
+        /** @TODO  fix check token */
         if (
           !cairo.isTypeContractAddress(tokenAddress) &&
           ADDRESS_LENGTH != tokenAddress.length
         ) {
-          toast({
-            title: `Wrong token address in the row number ${index}`,
-          });
-          return;
+          // toast({
+          //   title: `Wrong token address in the row number ${index}`,
+          //   status:"warning"
+          // });
+          // return;
         }
-
+        /** @TODO fix check recipient */
         if (
           !cairo.isTypeContractAddress(recipient) &&
           ADDRESS_LENGTH != tokenAddress.length
         ) {
-          toast({
-            title: `Wrong recipient in the row number ${index}`,
-          });
-          return;
+          // toast({
+          //   title: `Wrong recipient in the row number ${index}`,
+          //   status:"warning"
+          // });
+          // return;
         }
 
         const contract = new Contract(TokenERC20Abi.abi, tokenAddress, account);
@@ -260,7 +267,12 @@ const BatchTxModal = ({
       }
 
       console.log("calls", calls);
-      const multicall = await account.execute(callsData);
+      // const nonce = await account?.getNonce()
+      const nonce = await account?.getNonce();
+
+      const multicall = await account.execute(callsData, undefined, {
+        nonce: nonce,
+      });
       setTxHash(multicall?.transaction_hash);
       toast({
         title: "Tx execute. Waiting for confirmation",
@@ -380,7 +392,7 @@ const BatchTxModal = ({
               {txHash && (
                 <Box py={{ base: "1em" }}>
                   <ExternalStylizedButtonLink
-                    href={`${CONFIG_WEBSITE.page.explorer}/tx/${txHash}`}
+                    href={`${CONFIG_WEBSITE.page.voyager_explorer}/tx/${txHash}`}
                   >
                     <VoyagerExplorerImage></VoyagerExplorerImage>
                   </ExternalStylizedButtonLink>
