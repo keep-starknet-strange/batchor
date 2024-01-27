@@ -1,6 +1,6 @@
 export const CONFIG_WEBSITE = {
   title: "Batchor Starknet",
-  description: "Batchor Starknet ERC20 for transactions multicall",
+  description: "Batchor transactions multicall for ERC20 and ERC721",
   page: {
     portal: "https://github.com/keep-starknet-strange/batchor",
     explorer: "https://starkscan.co",

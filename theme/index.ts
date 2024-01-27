@@ -64,7 +64,7 @@ const theme = extendTheme({
   components: {
     Text: {
       sizes: {
-        sm: {
+        base: {
           fontSize: "17px",
           px: 4, // <-- px is short for paddingLeft and paddingRight
           py: 3, // <-- py is short for paddingTop and paddingBottom

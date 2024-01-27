@@ -1,19 +1,14 @@
 import type { NextPage } from "next";
-import {
-  Box,
-  Image,
-  Text,
-  useColorModeValue,
-} from "@chakra-ui/react";
+import { Box, Image, Text, useColorModeValue } from "@chakra-ui/react";
 import HeaderSEO from "../components/HeaderSEO";
 import { CONFIG_WEBSITE } from "../constants";
 import AccountView from "../components/starknet/AccountView";
-import { ContainerCSV } from "../components/form/ContainerCSV";
-import { BatchType } from "../types";
 import { useState } from "react";
+import UploadCSV from "../components/form/UploadCSV";
 
 const Home: NextPage = ({}) => {
   const color = useColorModeValue("gray.900", "gray.300");
+  const [file, setFile] = useState<File | undefined>();
 
   return (
     <>
@@ -48,22 +43,28 @@ const Home: NextPage = ({}) => {
                 {CONFIG_WEBSITE.title}✨
               </Text>
               <Text
-              fontFamily="monospace"
-              >{CONFIG_WEBSITE.description}</Text>
+                // fontFamily="monospace"
+                fontFamily="PressStart2P"
+                fontSize={{ base: "15px", md: "17px", lg: "19px" }}
+                fontStyle={"italic"}
+
+              >
+                {CONFIG_WEBSITE.description}
+              </Text>
 
               <Box>
-                <Text fontFamily="PressStart2P">
-                  Batch easily your transactions
+                <Text 
+                // fontFamily={{ base: "PressStart2P" }}
+                >
+                  Let's batch your TX with a CSV
                 </Text>
-
-                <ContainerCSV
-                // batchType={batchType}
-                ></ContainerCSV>
+                <UploadCSV
+                  fileParent={file}
+                  setFile={setFile}
+                ></UploadCSV>
               </Box>
 
-              <Box
-                gap="1em"
-              >
+              <Box gap="1em">
                 <AccountView></AccountView>
               </Box>
             </Box>

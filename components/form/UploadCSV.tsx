@@ -16,7 +16,13 @@ import * as xlsx from "xlsx";
 import { useAccount } from "@starknet-react/core";
 import BatchTxModal from "../modal/batch-tx";
 import { BatchType } from "../../types";
-import { hasExpectedColumns, hasExpectedColumnsERC721 } from "../../utils/csv";
+import {
+  ERC20_EXPECTED_COLUMNS,
+  ERC721_EXPECTED_COLUMNS,
+  hasExpectedColumns,
+  hasExpectedColumnsERC721,
+} from "../../utils/csv";
+import TableCsvView from "./TableCsvView";
 interface IReadData {
   fileParent?: File;
   setFile: (file: File) => void;
@@ -350,6 +356,23 @@ IReadData) => {
 
   return (
     <Box>
+    
+      <Text fontSize={{ base: "15px", md: "19px" }}>
+        {" "}
+        Select if you want to batch ERC20 (token) or ERC721 (NFT)
+      </Text>
+
+      {batchType == BatchType.ERC721 ? (
+        <Box>
+          <Text>Columns expected for ERC721</Text>
+          <Text>{ERC20_EXPECTED_COLUMNS}</Text>
+        </Box>
+      ) : (
+        <Box>
+          <Text>Columns expected for ERC721</Text>
+          <Text>{ERC721_EXPECTED_COLUMNS}</Text>
+        </Box>
+      )}
       <Box
         py={{ base: "0.5em" }}
         display={{ base: "flex" }}
@@ -403,75 +426,11 @@ IReadData) => {
         <Text> {summaryData}</Text>
       </Box>
 
-      <div>
-        {error && <p>{error}</p>}
-        <Table>
-          <Thead>
-            <Tr>
-              <Th>Token address</Th>
-              <Th>{batchType == BatchType.ERC20 ? "Amount" : "Token id"}</Th>
-              <Th>Recipient</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {csvData &&
-              csvData?.length > 0 &&
-              csvData?.map((row, index) => {
-                if (batchType == BatchType.ERC20) {
-                  const tokenAddress = String(row["token_address"]);
-                  const lenTokenAddress = String(tokenAddress).length;
-                  const recipient = String(row["recipient"]);
-                  const lenRecipientAddress = String(recipient).length;
-                  const amount = String(row["amount"]);
-                  return (
-                    <tr key={index}>
-                      <Td>
-                        {tokenAddress.slice(0, 10)} ...
-                        {tokenAddress.slice(
-                          lenTokenAddress - 10,
-                          lenTokenAddress
-                        )}{" "}
-                      </Td>
-                      <Td>{amount}</Td>
-                      <Td>
-                        {recipient.slice(0, 10)} ...{" "}
-                        {recipient.slice(
-                          lenRecipientAddress - 10,
-                          lenRecipientAddress
-                        )}
-                      </Td>
-                    </tr>
-                  );
-                } else if (batchType == BatchType.ERC721) {
-                  const tokenAddress = String(row["token_address"]);
-                  const lenTokenAddress = String(tokenAddress).length;
-                  const recipient = String(row["recipient"]);
-                  const lenRecipientAddress = String(recipient).length;
-                  const token_id = String(row["token_id"]);
-                  return (
-                    <tr key={index}>
-                      <Td>
-                        {tokenAddress.slice(0, 10)} ...
-                        {tokenAddress.slice(
-                          lenTokenAddress - 10,
-                          lenTokenAddress
-                        )}{" "}
-                      </Td>
-                      <Td>{token_id}</Td>
-                      <Td>
-                        {recipient.slice(0, 10)} ...{" "}
-                        {recipient.slice(
-                          lenRecipientAddress - 10,
-                          lenRecipientAddress
-                        )}
-                      </Td>
-                    </tr>
-                  );
-                }
-              })}
-          </Tbody>
-        </Table>
-      </div>
+      <TableCsvView
+        csvData={csvData}
+        error={error}
+        batchType={batchType}
+      ></TableCsvView>
     </Box>
   );
 };
