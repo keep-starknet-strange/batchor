@@ -12,7 +12,7 @@ import {
   ButtonProps,
   useToast,
 } from "@chakra-ui/react";
-import { useAccount, useProvider } from "@starknet-react/core";
+import { useAccount, useNetwork, useProvider } from "@starknet-react/core";
 import { ADDRESS_LENGTH, CONFIG_WEBSITE } from "../../../constants";
 import TokenERC721Abi from "../../../constants/abi/erc721_token.json";
 import TokenERC20Abi from "../../../constants/abi/token_erc20.json";
@@ -31,6 +31,7 @@ import GearLoader from "../../loader/GearLoader";
 import { ExternalStylizedButtonLink } from "../../button/NavItem";
 import { VoyagerExplorerImage } from "../../view/image/VoyagerExplorerImage";
 import { BatchType } from "../../../types";
+import { CHAINS_NAMES, CHAIN_IDS } from "../../../constants/address";
 interface IBatchModal {
   modalOpen: boolean;
   chatId?: string;
@@ -64,6 +65,9 @@ const BatchTxModal = ({
   const bg = useColorModeValue("gray.300", "gray.800");
   const accountStarknet = useAccount();
   const account = accountStarknet.account;
+  const network = useNetwork()
+  const chainId= network.chain.id
+  const networkName= network.chain.name
   const address = accountStarknet?.account?.address;
   const [isBatchCanBeSend, setIsBatchCanBeSend] = useState<boolean>(false);
   const [isLoadingTx, setIsLoadingTx] = useState<boolean>(false);
@@ -392,7 +396,7 @@ const BatchTxModal = ({
               {txHash && (
                 <Box py={{ base: "1em" }}>
                   <ExternalStylizedButtonLink
-                    href={`${CONFIG_WEBSITE.page.voyager_explorer}/tx/${txHash}`}
+                    href={`${CHAINS_NAMES.GOERLI == networkName.toString() ? CONFIG_WEBSITE.page.goerli_voyager_explorer:  CONFIG_WEBSITE.page.voyager_explorer}/tx/${txHash}`}
                   >
                     <VoyagerExplorerImage></VoyagerExplorerImage>
                   </ExternalStylizedButtonLink>

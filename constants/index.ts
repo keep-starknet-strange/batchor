@@ -4,6 +4,7 @@ export const CONFIG_WEBSITE = {
   page: {
     portal: "https://github.com/keep-starknet-strange/batchor",
     explorer: "https://starkscan.co",
+    goerli_explorer: "https://testnet.starkscan.co",
     voyager_explorer: "https://voyager.online",
     goerli_voyager_explorer: "https://goerli.voyager.online",
   },

@@ -17,7 +17,7 @@ Go to: https://batchor.madara.build
 
 For ERC20: 
 
-token_address,recipient,token_id
+token_address,recipient,amount
 0x0,0x04303C60233Ca91F72e53bE1A745E9D35cBbe7130E7438f716C8b4BC69852159, 1
 0x0,0x060d0bE6Dd9Ca2582130fA481A159258Ea8bEFA240c6d972fC7DbB1a7DA8431e, 2
 
@@ -27,11 +27,12 @@ token_address,recipient,token_id
 0x0,0x0, 2
 
 - Upload it too Batchor or in local: https://batchor.madara.build
-- Click upload csv
+- Click on "Upload csv"
 - Check the data and the summary.
 - Click in the button: "Try Batch".  
-- Click Process data: TX, process, verify the data.
+- Click "Process data": TX, process, verify the data.
 - Click batch to open the tx request.
+
 Check the info in batch multicall.
 If it's ok for you, let's send the batch tx.
 

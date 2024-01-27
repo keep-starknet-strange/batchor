@@ -13,10 +13,16 @@ import {
   Image as ImageChakra,
   Icon,
 } from "@chakra-ui/react";
-import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useNetwork,
+} from "@starknet-react/core";
 import { CONFIG_WEBSITE } from "../../../constants";
 import { ExternalStylizedButtonLink } from "../../button/NavItem";
 import { installWallet } from "../../../utils/connect";
+import { CHAINS_NAMES } from "../../../constants/address";
 interface IAdminPanelGroup {
   modalOpen: boolean;
   chatId?: string;
@@ -37,6 +43,9 @@ const ConnectModal = ({
   const bg = useColorModeValue("gray.300", "gray.800");
   const accountStarknet = useAccount();
   const address = accountStarknet?.account?.address;
+  const network = useNetwork();
+  const chainId = network.chain.id;
+  const networkName = network.chain.name;
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   return (
@@ -111,23 +120,28 @@ const ConnectModal = ({
                     display={{ base: "block", md: "flex" }}
                   >
                     <ExternalStylizedButtonLink
-                      href={`${CONFIG_WEBSITE.page?.explorer}/contract/${address}`}
+                      href={`${
+                        CHAINS_NAMES.GOERLI == networkName.toString()
+                          ? CONFIG_WEBSITE.page.goerli_explorer
+                          : CONFIG_WEBSITE.page.explorer
+                      }/contract/${address}`}
                       width={"150px"}
                     >
                       Explorer
-               
                     </ExternalStylizedButtonLink>
                     <ExternalStylizedButtonLink
-                      href={`${CONFIG_WEBSITE.page?.voyager_explorer}/contract/${address}`}
+                      href={`${
+                        CHAINS_NAMES.GOERLI == networkName.toString()
+                          ? CONFIG_WEBSITE.page.goerli_voyager_explorer
+                          : CONFIG_WEBSITE.page.voyager_explorer
+                      }/contract/${address}`}
                       width={"150px"}
                     >
                       {/* Voyager Explorer */}
                       <ImageChakra
-                      w={{base:"110px"}}
-                      src='/assets/voyager_explorer.svg'
-                      >
-
-                      </ImageChakra>
+                        w={{ base: "110px" }}
+                        src="/assets/voyager_explorer.svg"
+                      ></ImageChakra>
                     </ExternalStylizedButtonLink>
                   </Box>
 
