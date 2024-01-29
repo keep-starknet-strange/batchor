@@ -44,7 +44,7 @@ interface StylizedButtonLinkProps extends ButtonProps {
   href: string;
   title?: string;
   text?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   isExternal?: boolean;
   onClick?: () => void;
 }
