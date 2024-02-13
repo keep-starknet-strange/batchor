@@ -290,9 +290,9 @@ IReadData) => {
         Select if you want to batch ERC20 (token) or ERC721 (NFT)
       </Text>
 
-      {batchType == BatchType.ERC721 ? (
+      {batchType == BatchType.ERC20 ? (
         <Box>
-          <Text>Columns expected for ERC721</Text>
+          <Text>Columns expected for ERC20</Text>
           <Text>{ERC20_EXPECTED_COLUMNS}</Text>
         </Box>
       ) : (
